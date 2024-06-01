@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kubernetes Deployment Interface</title>
+    <style>
+        .console {
+            border: 1px solid black;
+            padding: 10px;
+            height: 300px;
+            overflow-y: scroll;
+        }
+    </style>
+</head>
+<body>
+    <h1>Kubernetes Deployment Interface</h1>
+    <button onclick="deploy('app1')">Deploy App 1</button>
+    <button onclick="deleteApp('app1')">Delete App 1</button>
+    <button onclick="deploy('app2')">Deploy App 2</button>
+    <button onclick="deleteApp('app2')">Delete App 2</button>
+    <button onclick="deploy('app3')">Deploy App 3</button>
+    <button onclick="deleteApp('app3')">Delete App 3</button>
+    <button onclick="deploy('app4')">Deploy App 4</button>
+    <button onclick="deleteApp('app4')">Delete App 4</button>
+
+    <h2>Pods in namespace axis-testing:</h2>
+    <label><input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()"> Auto-refresh</label>
+    <div class="console" id="pod-console">
+        <ul id="pod-list">
+            {{ range .pods }}
+            <li>{{ . }}</li>
+            {{ end }}
+        </ul>
+    </div>
+
+    <script>
+        let updateInterval;
+
+        function deploy(name) {
+            fetch(`/deploy/${name}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    updatePods();
+                    if (document.getElementById('auto-refresh').checked) {
+                        startUpdatingPods();
+                    }
+                })
+                .catch(error => alert('Error: ' + error));
+        }
+
+        function deleteApp(name) {
+            fetch(`/delete/${name}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    updatePods();
+                })
+                .catch(error => alert('Error: ' + error));
+        }
+
+        function updatePods() {
+            fetch(`/pods`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        const podList = document.getElementById('pod-list');
+                        podList.innerHTML = '';
+                        data.pods.forEach(pod => {
+                            const li = document.createElement('li');
+                            li.textContent = pod;
+                            podList.appendChild(li);
+                        });
+                        if (data.pods.length === 0) {
+                            stopUpdatingPods();
+                        }
+                    } else {
+                        alert('Error fetching pods: ' + data.message);
+                    }
+                })
+                .catch(error => alert('Error: ' + error));
+        }
+
+        function startUpdatingPods() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            updateInterval = setInterval(updatePods, 10000);
+        }
+
+        function stopUpdatingPods() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+        }
+
+        function toggleAutoRefresh() {
+            if (document.getElementById('auto-refresh').checked) {
+                startUpdatingPods();
+            } else {
+                stopUpdatingPods();
+            }
+        }
+
+        // Initial load
+        updatePods();
+    </script>
+</body>
+</html>
